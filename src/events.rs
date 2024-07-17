@@ -1,4 +1,4 @@
-use crate::abstractions::{IoResult, ReadExt, UnixStream};
+use crate::abstractions::{BufRead, BufReader, IoResult, ReadExt, UnixStream};
 const PATH_NAME: &str = ".socket2.sock";
 
 /// Raw, unparsed lines read from the Hyprland event socket
@@ -54,18 +54,29 @@ macro_rules! event_socket_impl {
     ($( $async:tt, $await:tt )? ) => {
         crate::abstractions::socket_impls!(PATH_NAME $($async, $await)?);
 
-        /// Read potentially many events at a time.
+        /// Create a hew connection from a custom path.
         ///
-        /// This returns once there is no more data to read.
-        #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
-        pub $($async)? fn read_events(&mut self) -> IoResult<Vec<RawHyprlandEventData>> {
-            let mut event_vec = Vec::new();
-            self.sock.read_to_end(&mut event_vec)$(.$await)??;
+        /// Use this if the Hyprland socket is not in the default location, or if the default location has changed.
+        #[inline]
+        pub $( $async )? fn new_from_path(path: &::std::path::Path) -> ::std::io::Result<Self> {
+            Ok(Self {
+                sock: BufReader::new(UnixStream::connect(path)$(.$await)??),
+                known_size_clonable_buffer: Vec::new(),
+            })
+        }
 
-            Ok(event_vec
-                .split(|b| *b == b'\n')
-                .map(|v| RawHyprlandEventData(v.to_vec()))
-                .collect())
+        /// Read the next event data
+        #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
+        pub $( $async )? fn next_event(&mut self) -> std::io::Result<RawHyprlandEventData> {
+            self.sock
+                .read_until(b'\n', &mut self.known_size_clonable_buffer)$(.$await)??;
+
+            self.known_size_clonable_buffer.shrink_to_fit();
+            let output = RawHyprlandEventData(self.known_size_clonable_buffer.clone());
+
+            self.known_size_clonable_buffer.clear();
+
+            Ok(output)
         }
     };
 }
@@ -73,7 +84,8 @@ macro_rules! event_socket_impl {
 /// A socket meant for reading Hyprland events
 #[derive(Debug)]
 pub struct HyprlandEventSocket {
-    sock: UnixStream,
+    sock: BufReader<UnixStream>,
+    known_size_clonable_buffer: Vec<u8>,
 }
 impl HyprlandEventSocket {
     #[cfg(any(feature = "tokio", feature = "async-lite"))]

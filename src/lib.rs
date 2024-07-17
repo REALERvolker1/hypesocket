@@ -11,7 +11,10 @@ pub mod json_commands;
 
 #[cfg(all(test, not(feature = "tokio"), not(feature = "async-lite")))]
 mod tests {
-    use crate::hyprctl::{CtlFlag, Hyprctl, HyprctlSocket};
+    use crate::{
+        events::HyprlandEventSocket,
+        hyprctl::{CtlFlag, Hyprctl, HyprctlSocket},
+    };
     #[test]
     fn exec_kitty() {
         let mut connection = HyprctlSocket::new_from_env().expect("Failed to connect to hyprland!");
@@ -29,15 +32,20 @@ mod tests {
     }
 
     #[test]
-    fn get_info() {
+    fn event_listener() {
+        let mut conn = HyprlandEventSocket::new_from_env().expect("Failed to connect to hyprland!");
+        for _ in 0..5 {
+            let event = conn.next_event().expect("Failed to read events!");
+
+            let (event, data) = event.try_parse_string().expect("Failed to parse event!");
+            println!("[{}] {}", event, data);
+        }
+    }
+
+    #[cfg(feature = "json_commands")]
+    #[test]
+    fn json_monitors() {
         let mut connection = HyprctlSocket::new_from_env().expect("Failed to connect to hyprland!");
-
-        let command = Hyprctl::new(Some(&[CtlFlag::Json]), &["monitors"]);
-
-        let info = connection
-            .run_hyprctl(&command)
-            .expect("Failed to get info!");
-        let info_string = String::from_utf8(info).unwrap();
-        println!("Info: {}", info_string);
+        let monitors = connection.get_monitors().expect("Failed to get monitors!");
     }
 }

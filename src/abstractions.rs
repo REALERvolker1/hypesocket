@@ -10,22 +10,15 @@ pub use async_net::unix::UnixStream;
 pub use futures_lite::{AsyncReadExt as ReadExt, AsyncWriteExt as WriteExt};
 
 #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
-pub use std::{io::Read as ReadExt, io::Write as WriteExt, os::unix::net::UnixStream};
+pub use std::{
+    io::{BufRead, BufReader, Read as ReadExt, Write as WriteExt},
+    os::unix::net::UnixStream,
+};
 
 pub type IoResult<T> = ::std::result::Result<T, ::std::io::Error>;
 
 macro_rules! socket_impls {
     ($socket_name:expr $(, $async:tt, $await:tt )? ) => {
-        /// Create a hew connection from a custom path.
-        ///
-        /// Use this if the Hyprland socket is not in the default location, or if the default location has changed.
-        #[inline]
-        pub $( $async )? fn new_from_path(path: &::std::path::Path) -> ::std::io::Result<Self> {
-            Ok(Self {
-                sock: UnixStream::connect(path)$(.$await)??,
-            })
-        }
-
         /// Create a hew connection from the environment variables.
         ///
         /// If this function does not work, first ensure you are using Hyprland. Then, ensure that the `new_from_path` function works.

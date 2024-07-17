@@ -63,10 +63,27 @@ impl Hyprctl {
 macro_rules! hyprctl_socket_impl {
     ($( $async:tt, $await:tt )? ) => {
         crate::abstractions::socket_impls!(PATH_NAME $($async, $await)?);
+
+        /// Create a hew connection from a custom path.
+        ///
+        /// Use this if the Hyprland socket is not in the default location, or if the default location has changed.
+        #[inline]
+        pub $( $async )? fn new_from_path(path: &::std::path::Path) -> ::std::io::Result<Self> {
+            Ok(Self {
+                sock: UnixStream::connect(path)$(.$await)??,
+            })
+        }
+
         /// Run a pre-allocated, pre-formatted hyprctl command.
-        #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
+        #[inline]
         pub $($async)? fn run_hyprctl(&mut self, command: &Hyprctl) -> std::io::Result<Vec<u8>> {
-            self.sock.write_all(command.bytes())$(.$await)??;
+            self.send_bytes(command.bytes())$(.$await)?
+        }
+
+        /// Send raw data to hyprctl
+        #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
+        pub $($async)? fn send_bytes(&mut self, bytes: &[u8]) -> std::io::Result<Vec<u8>> {
+            self.sock.write_all(bytes)$(.$await)??;
             let mut output_buffer = Vec::new();
             self.sock.read_to_end(&mut output_buffer)$(.$await)??;
 
@@ -78,6 +95,14 @@ macro_rules! hyprctl_socket_impl {
         pub $($async)? fn dispatch_exec(&mut self, shell_command: &str) -> std::io::Result<()> {
             self.run_hyprctl(&Hyprctl::new(None, &["dispatch", "--", "exec", shell_command]))?;
             Ok(())
+        }
+        #[cfg(feature = "json_commands")]
+        /// A shortcut helper function for running `hyprctl dispatch -- exec <command --args>`
+        #[inline]
+        pub $($async)? fn get_monitors(&mut self) -> std::io::Result<Vec<$crate::json_commands::Monitor>> {
+            let monitors = self.send_bytes(b"j/monitors\n")?;
+            let monitors = serde_json::from_slice(&monitors)?;
+            Ok(monitors)
         }
     };
 }
