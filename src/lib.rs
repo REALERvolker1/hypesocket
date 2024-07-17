@@ -13,7 +13,7 @@ pub mod json_commands;
 mod tests {
     use crate::{
         events::HyprlandEventSocket,
-        hyprctl::{CtlFlag, Hyprctl, HyprctlSocket},
+        hyprctl::{Hyprctl, HyprctlSocket},
     };
     #[test]
     fn exec_kitty() {
