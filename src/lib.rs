@@ -6,9 +6,12 @@ mod abstractions;
 pub mod events;
 pub mod hyprctl;
 
+#[cfg(feature = "json_commands")]
+pub mod json_commands;
+
 #[cfg(all(test, not(feature = "tokio"), not(feature = "async-lite")))]
 mod tests {
-    use crate::hyprctl::{Hyprctl, HyprctlSocket};
+    use crate::hyprctl::{CtlFlag, Hyprctl, HyprctlSocket};
     #[test]
     fn exec_kitty() {
         let mut connection = HyprctlSocket::new_from_env().expect("Failed to connect to hyprland!");
@@ -23,5 +26,18 @@ mod tests {
 
         let output_str = String::from_utf8_lossy(&output);
         assert_eq!(output_str, "ok");
+    }
+
+    #[test]
+    fn get_info() {
+        let mut connection = HyprctlSocket::new_from_env().expect("Failed to connect to hyprland!");
+
+        let command = Hyprctl::new(Some(&[CtlFlag::Json]), &["monitors"]);
+
+        let info = connection
+            .run_hyprctl(&command)
+            .expect("Failed to get info!");
+        let info_string = String::from_utf8(info).unwrap();
+        println!("Info: {}", info_string);
     }
 }

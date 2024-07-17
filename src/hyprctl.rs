@@ -73,8 +73,10 @@ macro_rules! hyprctl_socket_impl {
             Ok(output_buffer)
         }
 
-        pub $($async)? fn dispatch_exec(socket: &mut HyprctlSocket, shell_command: &str) -> std::io::Result<()> {
-            socket.run_hyprctl(&Hyprctl::new(None, &["dispatch", "--", "exec", shell_command]))?;
+        /// A shortcut helper function for running `hyprctl dispatch -- exec <command --args>`
+        #[inline]
+        pub $($async)? fn dispatch_exec(&mut self, shell_command: &str) -> std::io::Result<()> {
+            self.run_hyprctl(&Hyprctl::new(None, &["dispatch", "--", "exec", shell_command]))?;
             Ok(())
         }
     };
