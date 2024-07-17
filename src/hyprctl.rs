@@ -1,5 +1,3 @@
-use std::io;
-
 use crate::abstractions::{ReadExt, UnixStream, WriteExt};
 
 const PATH_NAME: &str = ".socket.sock";
@@ -59,7 +57,27 @@ impl Hyprctl {
         Self(buffer)
     }
 
-    crate::abstractions::tuple_vec_impls!();
+    crate::abstractions::tuple_vec_impls!(Vec<u8>);
+}
+
+macro_rules! hyprctl_socket_impl {
+    ($( $async:tt, $await:tt )? ) => {
+        crate::abstractions::socket_impls!(PATH_NAME $($async, $await)?);
+        /// Run a pre-allocated, pre-formatted hyprctl command.
+        #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
+        pub $($async)? fn run_hyprctl(&mut self, command: &Hyprctl) -> std::io::Result<Vec<u8>> {
+            self.sock.write_all(command.bytes())$(.$await)??;
+            let mut output_buffer = Vec::new();
+            self.sock.read_to_end(&mut output_buffer)$(.$await)??;
+
+            Ok(output_buffer)
+        }
+
+        pub $($async)? fn dispatch_exec(socket: &mut HyprctlSocket, shell_command: &str) -> std::io::Result<()> {
+            socket.run_hyprctl(&Hyprctl::new(None, &["dispatch", "--", "exec", shell_command]))?;
+            Ok(())
+        }
+    };
 }
 
 #[derive(Debug)]
@@ -67,29 +85,8 @@ pub struct HyprctlSocket {
     sock: UnixStream,
 }
 impl HyprctlSocket {
-    #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
-    crate::abstractions::socket_impls!(PATH_NAME);
     #[cfg(any(feature = "tokio", feature = "async-lite"))]
-    crate::abstractions::socket_impls!(PATH_NAME, async, await);
-
-    /// Run a pre-allocated, pre-formatted hyprctl command.
-    #[cfg(any(feature = "tokio", feature = "async-lite"))]
-    #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
-    pub async fn run_hyprctl(&mut self, command: &Hyprctl) -> io::Result<Vec<u8>> {
-        self.sock.write_all(command.bytes()).await?;
-        let mut output_buffer = Vec::new();
-        self.sock.read_to_end(&mut output_buffer).await?;
-
-        Ok(output_buffer)
-    }
-    /// Run a pre-allocated, pre-formatted hyprctl command.
+    hyprctl_socket_impl!(async, await);
     #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
-    #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
-    pub fn run_hyprctl(&mut self, command: &Hyprctl) -> io::Result<Vec<u8>> {
-        self.sock.write_all(command.bytes())?;
-        let mut output_buffer = Vec::new();
-        self.sock.read_to_end(&mut output_buffer)?;
-
-        Ok(output_buffer)
-    }
+    hyprctl_socket_impl!();
 }

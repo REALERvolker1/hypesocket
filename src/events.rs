@@ -47,7 +47,27 @@ impl RawHyprlandEventData {
 
         None
     }
-    crate::abstractions::tuple_vec_impls!();
+    crate::abstractions::tuple_vec_impls!(Vec<u8>);
+}
+
+macro_rules! event_socket_impl {
+    ($( $async:tt, $await:tt )? ) => {
+        crate::abstractions::socket_impls!(PATH_NAME $($async, $await)?);
+
+        /// Read potentially many events at a time.
+        ///
+        /// This returns once there is no more data to read.
+        #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
+        pub $($async)? fn read_events(&mut self) -> IoResult<Vec<RawHyprlandEventData>> {
+            let mut event_vec = Vec::new();
+            self.sock.read_to_end(&mut event_vec)$(.$await)??;
+
+            Ok(event_vec
+                .split(|b| *b == b'\n')
+                .map(|v| RawHyprlandEventData(v.to_vec()))
+                .collect())
+        }
+    };
 }
 
 /// A socket meant for reading Hyprland events
@@ -56,34 +76,8 @@ pub struct HyprlandEventSocket {
     sock: UnixStream,
 }
 impl HyprlandEventSocket {
-    #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
-    crate::abstractions::socket_impls!(PATH_NAME);
     #[cfg(any(feature = "tokio", feature = "async-lite"))]
-    crate::abstractions::socket_impls!(PATH_NAME, async, await);
-
-    /// Read potentially many events at a time.
-    ///
-    /// This returns once there is no more data to read.
-    #[cfg(any(feature = "tokio", feature = "async-lite"))]
-    #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
-    pub async fn read_events(&mut self) -> IoResult<Vec<RawHyprlandEventData>> {
-        let mut event_vec = Vec::new();
-        self.sock.read_to_end(&mut event_vec).await?;
-
-        Ok(event_vec
-            .split(|b| *b == b'\n')
-            .map(|v| RawHyprlandEventData(v.to_vec()))
-            .collect())
-    }
+    event_socket_impl!(async, await);
     #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
-    #[cfg_attr(feature = "tracing", tracing::instrument(level = "trace"))]
-    pub fn read_events(&mut self) -> IoResult<Vec<RawHyprlandEventData>> {
-        let mut event_vec = Vec::new();
-        self.sock.read_to_end(&mut event_vec)?;
-
-        Ok(event_vec
-            .split(|b| *b == b'\n')
-            .map(|v| RawHyprlandEventData(v.to_vec()))
-            .collect())
-    }
+    event_socket_impl!();
 }

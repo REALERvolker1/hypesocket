@@ -39,7 +39,7 @@ macro_rules! socket_impls {
 }
 
 macro_rules! tuple_vec_impls {
-    () => {
+    ($ty:ty) => {
         /// Try to convert the buffer into a string
         #[inline]
         pub fn try_as_str(&self) -> Result<&str, std::str::Utf8Error> {
@@ -48,7 +48,7 @@ macro_rules! tuple_vec_impls {
 
         /// Create a new instance from a currently allocated buffer, without checking if it is valid
         #[inline]
-        pub fn new_from_raw(buffer: Vec<u8>) -> Self {
+        pub fn new_from_raw(buffer: $ty) -> Self {
             Self(buffer)
         }
 
@@ -66,7 +66,7 @@ macro_rules! tuple_vec_impls {
 
         /// Deconstruct/destroy this, returning the inner buffer
         #[inline]
-        pub fn into_inner(self) -> Vec<u8> {
+        pub fn into_inner(self) -> $ty {
             self.0
         }
     };
