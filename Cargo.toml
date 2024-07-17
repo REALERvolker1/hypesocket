@@ -8,8 +8,8 @@ edition = "2021"
 name = "hypesocket"
 
 [dependencies]
-async-net = { version = "2", default-features = false, optional = true }
-futures-lite = { version = "2.3.0", default-features = false, features = [
+async-net = { version = "2.0", default-features = false, optional = true }
+futures-lite = { version = "2.3", default-features = false, features = [
     "std",
 ], optional = true }
 tokio = { version = "1.38", default-features = false, features = [
@@ -18,7 +18,7 @@ tokio = { version = "1.38", default-features = false, features = [
     "net",
     "socket2",
 ], optional = true }
-tracing = { version = "0.1.40", default-features = false, optional = true, features = [
+tracing = { version = "0.1", default-features = false, optional = true, features = [
     "attributes",
 ] }
 
@@ -27,6 +27,3 @@ default = []
 async-lite = ["dep:async-net", "dep:futures-lite"]
 tokio = ["dep:tokio"]
 tracing = ["dep:tracing"]
-
-[dev-dependencies]
-tokio = { version = "1.38", default-features = false, features = ["rt"] }
