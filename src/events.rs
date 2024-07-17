@@ -1,4 +1,4 @@
-use crate::abstractions::{BufRead, BufReader, IoResult, ReadExt, UnixStream};
+use crate::abstractions::{BufRead, BufReader, UnixStream};
 const PATH_NAME: &str = ".socket2.sock";
 
 /// Raw, unparsed lines read from the Hyprland event socket
@@ -51,8 +51,8 @@ impl RawHyprlandEventData {
 }
 
 macro_rules! event_socket_impl {
-    ($( $async:tt, $await:tt )? ) => {
-        crate::abstractions::socket_impls!(PATH_NAME $($async, $await)?);
+    ($(- $async:ident, $await:ident )? ) => {
+        crate::abstractions::socket_impls!(PATH_NAME $(, $async, $await)?);
 
         /// Create a hew connection from a custom path.
         ///
@@ -89,7 +89,7 @@ pub struct HyprlandEventSocket {
 }
 impl HyprlandEventSocket {
     #[cfg(any(feature = "tokio", feature = "async-lite"))]
-    event_socket_impl!(async, await);
+    event_socket_impl!(- async, await);
     #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
     event_socket_impl!();
 }

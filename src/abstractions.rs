@@ -1,13 +1,17 @@
 #[cfg(feature = "tokio")]
 pub use tokio::{
-    io::{AsyncReadExt as ReadExt, AsyncWriteExt as WriteExt},
+    io::{
+        AsyncBufReadExt as BufRead, AsyncReadExt as ReadExt, AsyncWriteExt as WriteExt, BufReader,
+    },
     net::UnixStream,
 };
 
 #[cfg(all(not(feature = "tokio"), feature = "async-lite"))]
 pub use async_net::unix::UnixStream;
 #[cfg(all(not(feature = "tokio"), feature = "async-lite"))]
-pub use futures_lite::{AsyncReadExt as ReadExt, AsyncWriteExt as WriteExt};
+pub use futures_lite::{
+    io::BufReader, AsyncBufReadExt as BufRead, AsyncReadExt as ReadExt, AsyncWriteExt as WriteExt,
+};
 
 #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
 pub use std::{
@@ -15,10 +19,8 @@ pub use std::{
     os::unix::net::UnixStream,
 };
 
-pub type IoResult<T> = ::std::result::Result<T, ::std::io::Error>;
-
 macro_rules! socket_impls {
-    ($socket_name:expr $(, $async:tt, $await:tt )? ) => {
+    ($socket_name:expr $(, $async:ident, $await:ident )? ) => {
         /// Create a hew connection from the environment variables.
         ///
         /// If this function does not work, first ensure you are using Hyprland. Then, ensure that the `new_from_path` function works.

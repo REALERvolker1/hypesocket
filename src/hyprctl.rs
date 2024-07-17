@@ -61,8 +61,8 @@ impl Hyprctl {
 }
 
 macro_rules! hyprctl_socket_impl {
-    ($( $async:tt, $await:tt )? ) => {
-        crate::abstractions::socket_impls!(PATH_NAME $($async, $await)?);
+    ($(- $async:ident, $await:ident )? ) => {
+        crate::abstractions::socket_impls!(PATH_NAME $(, $async, $await)?);
 
         /// Create a hew connection from a custom path.
         ///
@@ -93,14 +93,14 @@ macro_rules! hyprctl_socket_impl {
         /// A shortcut helper function for running `hyprctl dispatch -- exec <command --args>`
         #[inline]
         pub $($async)? fn dispatch_exec(&mut self, shell_command: &str) -> std::io::Result<()> {
-            self.run_hyprctl(&Hyprctl::new(None, &["dispatch", "--", "exec", shell_command]))?;
+            self.run_hyprctl(&Hyprctl::new(None, &["dispatch", "--", "exec", shell_command]))$(.$await)??;
             Ok(())
         }
         #[cfg(feature = "json_commands")]
         /// A shortcut helper function for running `hyprctl dispatch -- exec <command --args>`
         #[inline]
         pub $($async)? fn get_monitors(&mut self) -> std::io::Result<Vec<$crate::json_commands::Monitor>> {
-            let monitors = self.send_bytes(b"j/monitors\n")?;
+            let monitors = self.send_bytes(b"j/monitors\n")$(.$await)??;
             let monitors = serde_json::from_slice(&monitors)?;
             Ok(monitors)
         }
@@ -113,7 +113,7 @@ pub struct HyprctlSocket {
 }
 impl HyprctlSocket {
     #[cfg(any(feature = "tokio", feature = "async-lite"))]
-    hyprctl_socket_impl!(async, await);
+    hyprctl_socket_impl!(- async, await);
     #[cfg(all(not(feature = "tokio"), not(feature = "async-lite")))]
     hyprctl_socket_impl!();
 }

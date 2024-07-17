@@ -26,7 +26,7 @@ tracing = { version = "0.1", default-features = false, optional = true, features
 ] }
 
 [features]
-default = ["json_commands"]
+default = ["json_commands", "tokio"]
 async-lite = ["dep:async-net", "dep:futures-lite"]
 tokio = ["dep:tokio"]
 tracing = ["dep:tracing"]
