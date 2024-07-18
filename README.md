@@ -2,9 +2,11 @@
 
 I kind of got bored of waiting for hyprland-rs to implement all the newer Hyprland features, so I made this library
 
-It is a lower-level wrapper around the sockets. In fact, it is entirely possible to initialize a listener with a custom path, and parse any/all output data yourself.
+It is a lower-level wrapper around the sockets. In fact, it is entirely possible to initialize a listener with a custom path, and parse any/all output data yourself. If I got hit by a bus, this library would continue to work for years to come.
 
 Convenience functions are provided with the json_commands feature. However, they could easily become outdated. Be mindful of this.
+
+I also have to finish these too
 
 It is compatible with tokio (tokio feature) and async-net/futures-lite (async-lite feature). The default configuration uses just the std library alone.
 
