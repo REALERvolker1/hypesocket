@@ -51,8 +51,8 @@ impl Hyprctl {
             buffer.push(b' ');
         });
 
-        let last_char_idx = buffer.len() - 1;
-        buffer[last_char_idx] = b'\n';
+        // let last_char_idx = buffer.len() - 1;
+        // buffer[last_char_idx] = b'\n';
 
         Self(buffer)
     }
